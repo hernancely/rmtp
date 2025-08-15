@@ -1,0 +1,51 @@
+services:
+  nginx-rtmp:
+    build: .
+    container_name: gnix-rtmp-server
+    ports:
+      - "8080:80"         # Puerto HTTP para ver la transmisión
+      - "1935:1935"       # Puerto RTMP para recibir streams
+    volumes:
+      - hls_data:/opt/data/hls
+      - recordings_data:/opt/data/recordings
+    environment:
+      - NGINX_WORKER_PROCESSES=auto
+    restart: unless-stopped
+    networks:
+      - rtmp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: gnix-ngrok
+    restart: unless-stopped
+    command: 
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    volumes:
+      - ./ngrok-docker.yml:/etc/ngrok.yml:ro
+    ports:
+      - "4040:4040"       # Panel de control ngrok
+    environment:
+      - NGROK_AUTHTOKEN=30YIyCCiLqNSd1XuJZgP8hgFy1q_4XyPGVp85jv7J9DrxEMJ2
+    networks:
+      - rtmp-network
+    depends_on:
+      - nginx-rtmp
+
+volumes:
+  hls_data:
+    driver: local
+  recordings_data:
+    driver: local
+
+networks:
+  rtmp-network:
+    driver: bridge

@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "gnix-server",
+			"path": "."
+		},
+		{
+			"name": "ngrok",
+			"path": "../../Downloads/ngrok"
+		}
+	],
+	"settings": {}
+}

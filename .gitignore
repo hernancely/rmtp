@@ -1,0 +1,38 @@
+# Dependencias
+node_modules/
+npm-debug.log*
+
+# Datos locales
+data/hls/*
+data/recordings/*
+!data/hls/.gitkeep
+!data/recordings/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# Docker
+.docker/
+
+# Configuración local
+.env
+.env.local
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos temporales
+*.tmp
+*.swp
+*.swo
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Archivos de backup
+*.bak
+*~

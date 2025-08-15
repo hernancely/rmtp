@@ -1,0 +1,15 @@
+version: "2"
+authtoken: 30YIyCCiLqNSd1XuJZgP8hgFy1q_4XyPGVp85jv7J9DrxEMJ2
+
+tunnels:
+  rtmp-server:
+    proto: tcp
+    addr: nginx-rtmp:1935
+    
+  web-interface:
+    proto: http
+    addr: nginx-rtmp:8080
+
+region: us
+log_level: info
+web_addr: 0.0.0.0:4040

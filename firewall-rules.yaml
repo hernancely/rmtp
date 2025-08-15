@@ -1,0 +1,55 @@
+# Configuración de reglas de firewall para servidor RTMP en GCP
+# Usar con: gcloud compute firewall-rules create --rules-file=firewall-rules.yaml
+
+firewall_rules:
+  # Regla para tráfico RTMP (puerto 1935)
+  - name: rtmp-allow-1935
+    description: "Permitir tráfico RTMP entrante en puerto 1935"
+    direction: INGRESS
+    priority: 1000
+    source_ranges:
+      - "0.0.0.0/0"
+    target_tags:
+      - "rtmp-server"
+    allowed:
+      - ip_protocol: "tcp"
+        ports: ["1935"]
+        
+  # Regla para tráfico HTTP (puerto 80)
+  - name: rtmp-allow-http
+    description: "Permitir tráfico HTTP entrante en puerto 80"
+    direction: INGRESS
+    priority: 1000
+    source_ranges:
+      - "0.0.0.0/0"
+    target_tags:
+      - "rtmp-server"
+    allowed:
+      - ip_protocol: "tcp"
+        ports: ["80"]
+        
+  # Regla para SSH (puerto 22)
+  - name: rtmp-allow-ssh
+    description: "Permitir conexiones SSH"
+    direction: INGRESS
+    priority: 1000
+    source_ranges:
+      - "0.0.0.0/0"  # Para producción, limitar a IPs específicas
+    target_tags:
+      - "rtmp-server"
+    allowed:
+      - ip_protocol: "tcp"
+        ports: ["22"]
+        
+  # Regla para HTTPS (puerto 443) - opcional para certificados SSL
+  - name: rtmp-allow-https
+    description: "Permitir tráfico HTTPS entrante en puerto 443"
+    direction: INGRESS
+    priority: 1000
+    source_ranges:
+      - "0.0.0.0/0"
+    target_tags:
+      - "rtmp-server"
+    allowed:
+      - ip_protocol: "tcp"
+        ports: ["443"]

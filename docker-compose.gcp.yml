@@ -1,0 +1,31 @@
+services:
+  nginx-rtmp:
+    build: .
+    container_name: gnix-rtmp-server
+    ports:
+      - "80:80"           # Puerto HTTP estándar
+      - "1935:1935"       # Puerto RTMP para recibir streams
+    volumes:
+      - hls_data:/opt/data/hls
+      - recordings_data:/opt/data/recordings
+    environment:
+      - NGINX_WORKER_PROCESSES=auto
+    restart: unless-stopped
+    networks:
+      - rtmp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  hls_data:
+    driver: local
+  recordings_data:
+    driver: local
+
+networks:
+  rtmp-network:
+    driver: bridge
