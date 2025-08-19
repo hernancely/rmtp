@@ -12,29 +12,151 @@ Servidor RTMP completo con dashboard web para transmisión en vivo, diseñado pa
 - **Estadísticas detalladas** de streams y viewers
 - **Deploy automático** en Google Cloud Platform
 
-## 🚀 Despliegue Rápido
+## 🚀 Despliegue en Google Cloud Platform
 
 ### Prerequisitos
 
-- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
-- Cuenta de Google Cloud Platform
-- Docker (opcional para desarrollo local)
+- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) instalado localmente
+- Cuenta de Google Cloud Platform activa
+- VM creada en Google Cloud
 
-### Despliegue en GCP
+### Opción 1: Deploy Automático (Recomendado)
 
-1. **Clonar el repositorio**
+1. **Desde tu máquina local**
    ```bash
-   git clone https://github.com/tu-usuario/gnix-server.git
-   cd gnix-server
-   ```
-
-2. **Ejecutar script de deploy**
-   ```bash
+   git clone https://github.com/hernancely/rmtp.git
+   cd rmtp
    chmod +x deploy-gcp.sh
    ./deploy-gcp.sh
    ```
 
-3. **Seguir las instrucciones** del script interactivo
+### Opción 2: Deploy Manual en VM
+
+#### **Paso 1: Conectarse a la VM**
+```bash
+# Desde tu máquina local
+gcloud compute ssh [NOMBRE_VM] --zone=[ZONA]
+# Ejemplo: gcloud compute ssh mi-servidor --zone=us-central1-a
+```
+
+#### **Paso 2: Instalar Docker en la VM**
+```bash
+# Actualizar sistema
+sudo apt update && sudo apt upgrade -y
+
+# Instalar Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+
+# Instalar Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Verificar instalación
+docker --version
+docker-compose --version
+
+# Reiniciar sesión para aplicar permisos
+exit
+```
+
+#### **Paso 3: Reconectarse y configurar el proyecto**
+```bash
+# Conectarse nuevamente
+gcloud compute ssh [NOMBRE_VM] --zone=[ZONA]
+
+# Clonar el repositorio
+git clone https://github.com/hernancely/rmtp.git
+cd rmtp
+
+# Configurar variables de entorno
+EXTERNAL_IP=$(curl -s ifconfig.me)
+echo "IP Externa detectada: $EXTERNAL_IP"
+
+# Crear archivo .env
+echo "EXTERNAL_IP=$EXTERNAL_IP" > .env
+echo "RTMP_SERVER=$EXTERNAL_IP" >> .env
+echo "NODE_ENV=production" >> .env
+
+# Verificar configuración
+cat .env
+```
+
+#### **Paso 4: Deployar el servidor**
+```bash
+# Crear directorios necesarios
+mkdir -p data/hls data/recordings
+
+# Construir y ejecutar contenedores
+docker-compose -f docker-compose.gcp.yml up -d
+
+# Verificar que están corriendo
+docker ps
+```
+
+#### **Paso 5: Configurar Firewall (si es necesario)**
+```bash
+# Ejecutar desde tu máquina local (NO en la VM)
+gcloud compute firewall-rules create gnix-rtmp-ports \
+    --direction=INGRESS \
+    --priority=1000 \
+    --network=default \
+    --action=ALLOW \
+    --rules=tcp:1935,tcp:3000,tcp:80,tcp:8080 \
+    --source-ranges=0.0.0.0/0 \
+    --target-tags=rtmp-server
+
+# Aplicar tag a la VM
+gcloud compute instances add-tags [NOMBRE_VM] --tags=rtmp-server --zone=[ZONA]
+```
+
+#### **Paso 6: Verificar el deployment**
+```bash
+# Ver logs del dashboard
+docker logs gnix-dashboard
+
+# Ver logs del servidor RTMP
+docker logs gnix-rtmp-server
+
+# Verificar puertos abiertos
+sudo netstat -tulpn | grep -E ':(1935|3000|80)'
+
+# Ver estado de contenedores
+docker ps -a
+```
+
+### 🔍 **Verificación Final**
+
+Después del deployment, verifica que todo funciona:
+
+1. **Dashboard**: `http://[IP_EXTERNA]:3000`
+2. **Stats NGINX**: `http://[IP_EXTERNA]:8080/stats`
+3. **Test RTMP**: `rtmp://[IP_EXTERNA]:1935/live`
+
+### 🛠️ **Comandos de Mantenimiento**
+
+```bash
+# Reiniciar servicios
+docker-compose -f docker-compose.gcp.yml restart
+
+# Ver logs en tiempo real
+docker logs -f gnix-dashboard
+docker logs -f gnix-rtmp-server
+
+# Parar servicios
+docker-compose -f docker-compose.gcp.yml down
+
+# Actualizar desde GitHub
+git pull origin main
+docker-compose -f docker-compose.gcp.yml up -d --build
+
+# Ver uso de recursos
+docker stats
+
+# Limpiar logs antiguos
+docker system prune -f
+```
 
 ## 📡 Configuración OBS
 
