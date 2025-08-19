@@ -1,55 +1,56 @@
-# Configuración de reglas de firewall para servidor RTMP en GCP
-# Usar con: gcloud compute firewall-rules create --rules-file=firewall-rules.yaml
+# Configuración de Firewall para GNIX RTMP Server
+# Este archivo documenta las reglas de firewall necesarias
 
-firewall_rules:
-  # Regla para tráfico RTMP (puerto 1935)
-  - name: rtmp-allow-1935
-    description: "Permitir tráfico RTMP entrante en puerto 1935"
-    direction: INGRESS
-    priority: 1000
-    source_ranges:
-      - "0.0.0.0/0"
-    target_tags:
-      - "rtmp-server"
-    allowed:
-      - ip_protocol: "tcp"
-        ports: ["1935"]
-        
-  # Regla para tráfico HTTP (puerto 80)
-  - name: rtmp-allow-http
-    description: "Permitir tráfico HTTP entrante en puerto 80"
-    direction: INGRESS
-    priority: 1000
-    source_ranges:
-      - "0.0.0.0/0"
-    target_tags:
-      - "rtmp-server"
-    allowed:
-      - ip_protocol: "tcp"
-        ports: ["80"]
-        
-  # Regla para SSH (puerto 22)
-  - name: rtmp-allow-ssh
-    description: "Permitir conexiones SSH"
-    direction: INGRESS
-    priority: 1000
-    source_ranges:
-      - "0.0.0.0/0"  # Para producción, limitar a IPs específicas
-    target_tags:
-      - "rtmp-server"
-    allowed:
-      - ip_protocol: "tcp"
-        ports: ["22"]
-        
-  # Regla para HTTPS (puerto 443) - opcional para certificados SSL
-  - name: rtmp-allow-https
-    description: "Permitir tráfico HTTPS entrante en puerto 443"
-    direction: INGRESS
-    priority: 1000
-    source_ranges:
-      - "0.0.0.0/0"
-    target_tags:
-      - "rtmp-server"
-    allowed:
-      - ip_protocol: "tcp"
-        ports: ["443"]
+# Regla principal (creada automáticamente por deploy-gcp.sh)
+gnix-rtmp-ports:
+  direction: INGRESS
+  priority: 1000
+  network: default
+  action: ALLOW
+  rules: tcp:1935,tcp:3000,tcp:80,tcp:8080
+  source-ranges: 0.0.0.0/0
+  target-tags: rtmp-server
+
+# Reglas adicionales de seguridad recomendadas:
+
+# 1. SSH restringido (opcional - solo desde tu IP)
+ssh-restricted:
+  direction: INGRESS
+  priority: 900
+  network: default
+  action: ALLOW
+  rules: tcp:22
+  source-ranges: TU_IP_PUBLICA/32  # Cambiar por tu IP
+  target-tags: rtmp-server
+
+# 2. Dashboard solo desde IPs específicas (opcional)
+dashboard-restricted:
+  direction: INGRESS
+  priority: 900
+  network: default
+  action: ALLOW
+  rules: tcp:3000
+  source-ranges: TU_IP_PUBLICA/32,OTRA_IP/32
+  target-tags: rtmp-server
+
+# 3. RTMP desde rango de IPs conocidas (opcional)
+rtmp-restricted:
+  direction: INGRESS
+  priority: 900
+  network: default
+  action: ALLOW
+  rules: tcp:1935
+  source-ranges: TU_RED_LOCAL/24  # ej: 192.168.1.0/24
+  target-tags: rtmp-server
+
+# Comandos para aplicar reglas adicionales:
+#
+# gcloud compute firewall-rules create ssh-restricted \
+#   --direction=INGRESS --priority=900 --network=default \
+#   --action=ALLOW --rules=tcp:22 \
+#   --source-ranges=TU_IP/32 --target-tags=rtmp-server
+#
+# gcloud compute firewall-rules create dashboard-restricted \
+#   --direction=INGRESS --priority=900 --network=default \
+#   --action=ALLOW --rules=tcp:3000 \
+#   --source-ranges=TU_IP/32 --target-tags=rtmp-server

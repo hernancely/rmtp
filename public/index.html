@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GNIX RTMP Server Dashboard</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎥 GNIX RTMP Server</h1>
+            <div class="status-indicator">
+                <span id="status" class="status online">● En línea</span>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Server Info Card -->
+            <div class="card server-info">
+                <h2>📡 Información del Servidor</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>URL RTMP:</label>
+                        <div class="url-container">
+                            <input type="text" id="rtmp-url" readonly>
+                            <button onclick="copyToClipboard('rtmp-url')" class="copy-btn">📋</button>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <label>Stream Key:</label>
+                        <div class="url-container">
+                            <input type="text" id="stream-key" value="live-stream" readonly>
+                            <button onclick="copyToClipboard('stream-key')" class="copy-btn">📋</button>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <label>URL HLS:</label>
+                        <div class="url-container">
+                            <input type="text" id="hls-url" readonly>
+                            <button onclick="copyToClipboard('hls-url')" class="copy-btn">📋</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Stream Viewer -->
+            <div class="card stream-viewer">
+                <h2>📺 Transmisión en Vivo</h2>
+                <div class="video-container">
+                    <video id="live-video" controls muted autoplay>
+                        Tu navegador no soporta el elemento video.
+                    </video>
+                    <div class="video-controls">
+                        <button onclick="refreshStream()" class="btn-primary">🔄 Actualizar Stream</button>
+                        <button onclick="toggleFullscreen()" class="btn-secondary">⛶ Pantalla Completa</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Streams -->
+            <div class="card streams-list">
+                <h2>🔴 Streams Activos</h2>
+                <div id="streams-container">
+                    <p>Cargando streams...</p>
+                </div>
+            </div>
+
+            <!-- OBS Setup Guide -->
+            <div class="card obs-guide">
+                <h2>🎮 Configuración OBS</h2>
+                <div class="obs-settings">
+                    <ol>
+                        <li>Abre OBS Studio</li>
+                        <li>Ve a Configuración → Stream</li>
+                        <li>Selecciona "Servidor personalizado"</li>
+                        <li>Copia la URL RTMP de arriba</li>
+                        <li>Usa la Stream Key: <code>live-stream</code></li>
+                        <li>¡Inicia transmisión!</li>
+                    </ol>
+                    <button onclick="showOBSModal()" class="btn-info">📖 Guía Detallada</button>
+                </div>
+            </div>
+
+            <!-- Recordings -->
+            <div class="card recordings">
+                <h2>💾 Grabaciones</h2>
+                <div class="recordings-controls">
+                    <button onclick="refreshRecordings()" class="btn-primary">🔄 Actualizar</button>
+                    <button onclick="deleteAllRecordings()" class="btn-danger">🗑️ Eliminar Todo</button>
+                </div>
+                <div id="recordings-list">
+                    <p>Cargando grabaciones...</p>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="card statistics">
+                <h2>📊 Estadísticas</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="total-streams">0</span>
+                        <span class="stat-label">Streams Totales</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="total-viewers">0</span>
+                        <span class="stat-label">Espectadores</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="bandwidth">0 KB/s</span>
+                        <span class="stat-label">Ancho de Banda</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="uptime">00:00:00</span>
+                        <span class="stat-label">Tiempo Activo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OBS Modal -->
+    <div id="obs-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Configuración Detallada OBS</h2>
+            <div class="modal-body">
+                <h3>Configuración de Stream:</h3>
+                <ul>
+                    <li><strong>Tipo:</strong> Servidor personalizado de streaming</li>
+                    <li><strong>Servidor:</strong> <span id="modal-rtmp-url"></span></li>
+                    <li><strong>Clave de Stream:</strong> live-stream</li>
+                </ul>
+                
+                <h3>Configuración de Salida:</h3>
+                <ul>
+                    <li><strong>Encoder:</strong> x264</li>
+                    <li><strong>Bitrate:</strong> 2500 Kbps (recomendado)</li>
+                    <li><strong>Keyframe Interval:</strong> 2</li>
+                    <li><strong>Preset:</strong> veryfast</li>
+                </ul>
+                
+                <h3>Para añadir publicidad:</h3>
+                <ul>
+                    <li>Usa Escenas múltiples en OBS</li>
+                    <li>Crea una escena "Publicidad" con tus anuncios</li>
+                    <li>Usa transiciones automáticas o manuales</li>
+                    <li>Considera usar plugins como Advanced Scene Switcher</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,51 +1,48 @@
+version: '3.8'
+
 services:
-  nginx-rtmp:
-    build: .
+  nginx:
+    build: 
+      context: .
+      dockerfile: Dockerfile.nginx
     container_name: gnix-rtmp-server
     ports:
-      - "8080:80"         # Puerto HTTP para ver la transmisión
-      - "1935:1935"       # Puerto RTMP para recibir streams
+      - "1935:1935"    # RTMP port
+      - "8080:8080"    # HTTP/HLS port
     volumes:
-      - hls_data:/opt/data/hls
-      - recordings_data:/opt/data/recordings
+      - ./data/hls:/var/hls
+      - ./data/recordings:/var/recordings
+      - ./www:/var/www
+    networks:
+      - rtmp-network
+    restart: unless-stopped
     environment:
       - NGINX_WORKER_PROCESSES=auto
-    restart: unless-stopped
-    networks:
-      - rtmp-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: gnix-ngrok
-    restart: unless-stopped
-    command: 
-      - "start"
-      - "--all"
-      - "--config"
-      - "/etc/ngrok.yml"
-    volumes:
-      - ./ngrok-docker.yml:/etc/ngrok.yml:ro
-    ports:
-      - "4040:4040"       # Panel de control ngrok
-    environment:
-      - NGROK_AUTHTOKEN=30YIyCCiLqNSd1XuJZgP8hgFy1q_4XyPGVp85jv7J9DrxEMJ2
-    networks:
-      - rtmp-network
     depends_on:
-      - nginx-rtmp
+      - web
 
-volumes:
-  hls_data:
-    driver: local
-  recordings_data:
-    driver: local
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: gnix-dashboard
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data/recordings:/var/recordings
+      - ./public:/app/public
+    networks:
+      - rtmp-network
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - RTMP_SERVER=${EXTERNAL_IP:-localhost}
+      - PORT=3000
 
 networks:
   rtmp-network:
     driver: bridge
+
+volumes:
+  hls-data:
+  recordings-data:

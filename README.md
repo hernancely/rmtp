@@ -1,155 +1,243 @@
-# 🎥 Servidor RTMP/HLS con Nginx + Ngrok
+# 🎥 GNIX RTMP Server
 
-Un servidor completo para streaming en tiempo real que permite conectar cámaras remotas y transmitir video a través de RTMP con exposición automática a internet mediante Ngrok.
+Servidor RTMP completo con dashboard web para transmisión en vivo, diseñado para deployarse en Google Cloud Platform.
 
-## 🚀 Características
+## ✨ Características
 
-- **Servidor RTMP** en puerto 1935 para recibir streams
-- **Servidor HTTP** en puerto 8080 para visualización web
-- **Ngrok integrado** para exposición automática a internet
-- **Conversión automática** de RTMP a HLS
-- **Interfaz web** moderna y responsive
-- **Múltiples streams** simultáneos
-- **Grabación automática** de transmisiones
-- **Estadísticas en tiempo real**
+- **Servidor RTMP** con nginx-rtmp-module
+- **Dashboard web** con visualización en tiempo real
+- **Grabación automática** de streams
+- **Compatible con OBS** para agregar publicidad
+- **Visualización HLS** en tiempo real
+- **Estadísticas detalladas** de streams y viewers
+- **Deploy automático** en Google Cloud Platform
 
-## 📋 Requisitos
+## 🚀 Despliegue Rápido
 
-- Docker y Docker Compose instalados
-- Puertos 8080, 1935 y 4040 disponibles
-- Token de Ngrok (ya configurado)
+### Prerequisitos
 
-## 🛠️ Instalación y Uso
+- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
+- Cuenta de Google Cloud Platform
+- Docker (opcional para desarrollo local)
 
-### Inicio Simple
-```cmd
-start.bat
+### Despliegue en GCP
+
+1. **Clonar el repositorio**
+   ```bash
+   git clone https://github.com/tu-usuario/gnix-server.git
+   cd gnix-server
+   ```
+
+2. **Ejecutar script de deploy**
+   ```bash
+   chmod +x deploy-gcp.sh
+   ./deploy-gcp.sh
+   ```
+
+3. **Seguir las instrucciones** del script interactivo
+
+## 📡 Configuración OBS
+
+### URLs del Servidor
+
+Después del deployment, obtendrás:
+
+- **Dashboard**: `http://[IP_EXTERNA]:3000`
+- **RTMP URL**: `rtmp://[IP_EXTERNA]:1935/live`
+- **Stream Key**: `live-stream` (o personalizable)
+
+### Configuración en OBS
+
+1. **Configuración → Stream**
+2. **Servicio**: Custom Streaming Server
+3. **Servidor**: `rtmp://[IP_EXTERNA]:1935/live`
+4. **Stream Key**: `live-stream`
+
+### Configuración Recomendada de Salida
+
+- **Encoder**: x264
+- **Bitrate**: 2500 Kbps
+- **Keyframe Interval**: 2
+- **Preset**: veryfast
+
+## 🎯 Integración con Publicidad
+
+### Opción 1: Escenas Múltiples en OBS
+
+1. Crear escena "Stream Principal"
+2. Crear escena "Publicidad"
+3. Usar transiciones automáticas
+4. Plugin recomendado: **Advanced Scene Switcher**
+
+### Opción 2: RTMP Push/Pull
+
+El servidor soporta múltiples aplicaciones RTMP para routing avanzado:
+
+```nginx
+application ads {
+    live on;
+    allow publish [IP_AUTORIZADA];
+    push rtmp://localhost:1935/live/main-stream;
+}
 ```
 
-### Manual con Docker Compose
-```cmd
-# Iniciar todos los servicios
-docker compose up -d
+## 🔧 Desarrollo Local
 
-# Ver logs
-docker compose logs -f
+### Con Docker Compose
 
-# Detener
-docker compose down
-```
-
-## 🌐 URLs de Acceso
-
-Una vez iniciado el servidor:
-
-- **Panel Ngrok**: http://localhost:4040 (URLs públicas aquí)
-- **Servidor local**: http://localhost:8080
-- **Estadísticas**: http://localhost:8080/stats
-
-## 🎬 Configurar tu Cámara Remota
-
-### 1. Obtener URLs Públicas
-Ve a http://localhost:4040 y verás:
-- **URL TCP**: Para conectar tu cámara (ej: `tcp://x.tcp.ngrok.io:12345`)
-- **URL HTTPS**: Para ver la transmisión (ej: `https://abc123.ngrok.io`)
-
-### 2. Configurar OBS Studio (en ubicación remota)
-1. Configuración → Stream
-2. Servicio: Personalizado
-3. Servidor: `tcp://x.tcp.ngrok.io:12345` (URL TCP de ngrok)
-4. Clave de stream: `mycamera`
-
-### 3. Configurar FFmpeg
 ```bash
-ffmpeg -i [fuente] -c:v libx264 -c:a aac -f flv tcp://x.tcp.ngrok.io:12345/live/mycamera
+# Desarrollo
+docker-compose up -d
+
+# Producción local
+docker-compose -f docker-compose.gcp.yml up -d
 ```
 
-### 4. Configurar Cámaras IP
-- **Protocolo**: RTMP
-- **URL**: `tcp://x.tcp.ngrok.io:12345/live`
-- **Stream Key**: `mycamera`
+### URLs Locales
 
-## 🌐 Ver la Transmisión
+- **Dashboard**: http://localhost:3000
+- **RTMP**: rtmp://localhost:1935/live
+- **HLS**: http://localhost:8080/hls
+- **Stats**: http://localhost:8080/stats
 
-Usa la URL HTTPS de ngrok en cualquier navegador:
-- `https://abc123.ngrok.io`
-- Haz clic en "Cargar Stream"
-- ¡Disfruta tu transmisión desde cualquier lugar!
+## 📊 API Endpoints
+
+### Información del Servidor
+```
+GET /api/server-info
+```
+
+### Streams Activos
+```
+GET /api/streams
+```
+
+### Grabaciones
+```
+GET /api/recordings
+GET /api/download/:filename
+```
+
+## 🎮 Dashboard Features
+
+- **Visualización en tiempo real** del stream
+- **URLs copiables** para OBS
+- **Lista de streams activos** con estadísticas
+- **Descargas de grabaciones**
+- **Guía de configuración OBS**
+- **Estadísticas del servidor**
+
+## 🔒 Configuración de Seguridad
+
+### Firewall Rules (GCP)
+
+El script crea automáticamente reglas para:
+- Puerto 1935 (RTMP)
+- Puerto 3000 (Dashboard)
+- Puerto 80/8080 (HTTP/HLS)
+
+### Autenticación RTMP (Opcional)
+
+Descomentar en `nginx.conf`:
+```nginx
+on_publish http://web:3000/auth;
+```
+
+Implementar validación en `server.js`:
+```javascript
+app.post('/auth', (req, res) => {
+    const { name } = req.body;
+    // Implementar lógica de autenticación
+    res.status(200).send('OK');
+});
+```
 
 ## 📁 Estructura del Proyecto
 
 ```
 gnix-server/
-├── nginx.conf              # Configuración de Nginx (puerto 8080)
-├── docker-compose.yml      # Configuración completa con Ngrok
-├── ngrok-docker.yml        # Configuración de Ngrok
-├── Dockerfile             # Imagen Docker personalizada
-├── start.bat              # Script de inicio simple
-├── www/static/index.html  # Interfaz web de visualización
-└── README.md              # Esta documentación
+├── docker-compose.yml          # Docker compose para desarrollo
+├── docker-compose.gcp.yml      # Docker compose para GCP
+├── deploy-gcp.sh              # Script de deployment
+├── nginx.conf                 # Configuración nginx-rtmp
+├── server.js                  # Servidor Node.js para dashboard
+├── package.json               # Dependencias Node.js
+├── Dockerfile.nginx           # Docker para nginx-rtmp
+├── Dockerfile.web             # Docker para dashboard
+├── public/                    # Frontend del dashboard
+│   ├── index.html
+│   ├── css/dashboard.css
+│   └── js/dashboard.js
+├── www/                       # Archivos estáticos nginx
+│   └── stat.xsl              # Stylesheet para stats XML
+└── data/                      # Volúmenes persistentes
+    ├── hls/                   # Archivos HLS
+    └── recordings/            # Grabaciones
 ```
 
-## 🔧 Configuración
+## 🛠️ Personalización
 
-### Token de Ngrok
-Ya configurado: `30YIyCCiLqNSd1XuJZgP8hgFy1q_4XyPGVp85jv7J9DrxEMJ2`
+### Variables de Entorno
 
-### Puertos Configurados
-- **8080**: Servidor web nginx
-- **1935**: Servidor RTMP
-- **4040**: Panel de control Ngrok
-
-### Túneles Ngrok Automáticos
-- **TCP**: `nginx-rtmp:1935` → URL pública para cámaras
-- **HTTP**: `nginx-rtmp:8080` → URL pública para visualización
-
-## 🐛 Resolución de Problemas
-
-### El servidor no inicia
-```cmd
-# Ver estado de contenedores
-docker compose ps
-
-# Ver logs
-docker compose logs
+```bash
+# .env file
+EXTERNAL_IP=tu.ip.externa
+RTMP_SERVER=tu.servidor.com
+PORT=3000
+NODE_ENV=production
 ```
 
-### Ngrok no se conecta
-- Verifica que el token esté correcto en `ngrok-docker.yml`
-- Revisa logs: `docker compose logs ngrok`
-- Ve al panel: http://localhost:4040
+### Configuración Nginx
 
-### No aparecen túneles
-- Espera 30-60 segundos después del inicio
-- Refresca http://localhost:4040
-- Reinicia: `docker compose restart ngrok`
+Editar `nginx.conf` para:
+- Cambiar puertos
+- Agregar aplicaciones RTMP
+- Configurar autenticación
+- Modificar configuración HLS
 
-### Cámara no conecta
-- Usa la URL TCP completa de ngrok
-- Incluye `/live` al final de la URL
-- Verifica que el stream key sea `mycamera`
+### Estilos del Dashboard
 
-## 📊 Monitoreo
+Modificar `public/css/dashboard.css` para personalizar la apariencia.
 
-- **Panel Ngrok**: http://localhost:4040
-- **Estadísticas RTMP**: http://localhost:8080/stats  
-- **Logs en tiempo real**: `docker compose logs -f`
+## 🔍 Troubleshooting
 
-## 🎯 Ejemplo Completo
+### Ver logs del contenedor
 
-1. **Ejecutar**: `start.bat`
-2. **Esperar**: 30 segundos
-3. **Ir a**: http://localhost:4040
-4. **Copiar URL TCP**: `tcp://4.tcp.ngrok.io:12345`
-5. **En OBS remoto**: Servidor = URL TCP, Stream Key = `mycamera`
-6. **Ver stream**: URL HTTPS de ngrok en navegador
+```bash
+# Logs del dashboard
+docker logs gnix-dashboard
 
-## 🔒 Seguridad
+# Logs del servidor RTMP
+docker logs gnix-rtmp-server
 
-- URLs de ngrok cambian al reiniciar (versión gratuita)
-- Para URLs fijas, considera ngrok Pro
-- En producción, configura autenticación en nginx
+# En GCP
+gcloud compute ssh gnix-rtmp-server --zone=us-central1-a
+sudo journalctl -u gnix-rtmp -f
+```
+
+### Verificar puertos
+
+```bash
+# Verificar que los puertos estén abiertos
+sudo netstat -tulpn | grep -E ':(1935|3000|8080)'
+```
+
+### Problemas comunes
+
+1. **Stream no se ve**: Verificar que el stream esté llegando a `/stats`
+2. **No se puede conectar**: Verificar firewall rules
+3. **Grabaciones no funcionan**: Verificar permisos de `/var/recordings`
+
+## 📞 Soporte
+
+- **Issues**: [GitHub Issues](https://github.com/tu-usuario/gnix-server/issues)
+- **Documentación**: Este README
+- **Stats en vivo**: `http://[servidor]/stats`
+
+## 📄 Licencia
+
+MIT License - ver [LICENSE](LICENSE) para más detalles.
 
 ---
 
-🎉 **¡Listo para streaming global!** Tu cámara puede estar en cualquier parte del mundo y transmitir a través de internet.
+**¿Preguntas?** Abre un issue o revisa la documentación del dashboard web.
